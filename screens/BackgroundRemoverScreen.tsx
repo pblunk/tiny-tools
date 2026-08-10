@@ -1,10 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
-import * as FileSystem from 'expo-file-system/legacy';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,7 +18,7 @@ import { Text } from '@/components/themed-text';
 import { ToolIconWithBackground } from '@/components/ToolIconRenderer';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import {
-  BackgroundRemovalConfigurationError,
+  NativeBackgroundRemovalUnavailableError,
   removeImageBackground,
   type BackgroundRemovalResult,
 } from '@/services/background-removal';
@@ -29,9 +28,7 @@ type Status = 'idle' | 'selected' | 'processing' | 'completed' | 'error';
 export function BackgroundRemoverScreen() {
   const [selectedImage, setSelectedImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
-  const [result, setResult] = useState<
-    (BackgroundRemovalResult & { uri: string }) | null
-  >(null);
+  const [result, setResult] = useState<BackgroundRemovalResult | null>(null);
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -58,11 +55,6 @@ export function BackgroundRemoverScreen() {
   );
 
   const canProcess = Boolean(selectedImage) && status !== 'processing';
-  const resultDataUri = useMemo(
-    () => (result ? `data:image/png;base64,${result.pngBase64}` : null),
-    [result],
-  );
-
   const chooseImage = async () => {
     setMessage(null);
 
@@ -116,18 +108,12 @@ export function BackgroundRemoverScreen() {
     if (!selectedImage || status === 'processing') return;
 
     setStatus('processing');
-    setMessage('Removing the background...');
+    setMessage('Removing the background on this device...');
     setSaved(false);
 
     try {
       const processed = await removeImageBackground({ image: selectedImage });
-      const localUri = `${FileSystem.cacheDirectory}${processed.filename}`;
-
-      await FileSystem.writeAsStringAsync(localUri, processed.pngBase64, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      setResult({ ...processed, uri: localUri });
+      setResult(processed);
       setStatus('completed');
       setMessage('Transparent PNG ready.');
     } catch (error) {
@@ -252,7 +238,11 @@ export function BackgroundRemoverScreen() {
         </View>
 
         <Button
-          label={status === 'processing' ? 'Processing' : 'Remove Background'}
+          label={
+            status === 'processing'
+              ? 'Removing Background...'
+              : 'Remove Background'
+          }
           icon="color-wand-outline"
           onPress={removeBackground}
           disabled={!canProcess}
@@ -298,7 +288,7 @@ export function BackgroundRemoverScreen() {
           />
           <PreviewPanel
             title="After"
-            uri={resultDataUri}
+            uri={result?.uri ?? null}
             checkerboard
             backgroundColor={cardColor}
             borderColor={borderColor}
@@ -482,12 +472,16 @@ function IconButton({
 }
 
 function getErrorMessage(error: unknown) {
-  if (error instanceof BackgroundRemovalConfigurationError) {
-    return 'Add EXPO_PUBLIC_BACKGROUND_REMOVAL_ENDPOINT for a secure backend before processing images.';
+  if (error instanceof NativeBackgroundRemovalUnavailableError) {
+    return error.message;
   }
 
-  if (error instanceof TypeError) {
-    return 'The background removal service could not be reached. Check your connection and backend endpoint.';
+  if (error instanceof Error && error.message.includes('REQUIRES_API_FALLBACK')) {
+    return 'On-device background removal requires iOS 17 or newer. No image was uploaded.';
+  }
+
+  if (error instanceof Error && error.message.includes('not using Expo Go')) {
+    return 'Background removal needs an iOS or Android development build because it uses native on-device ML.';
   }
 
   if (error instanceof Error) return error.message;

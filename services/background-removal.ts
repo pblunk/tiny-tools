@@ -1,4 +1,9 @@
+import {
+  isNativeBackgroundRemovalSupported,
+  removeBackground,
+} from '@six33/react-native-bg-removal';
 import type { ImagePickerAsset } from 'expo-image-picker';
+import { Platform } from 'react-native';
 
 export type BackgroundRemovalInput = {
   image: ImagePickerAsset;
@@ -7,142 +12,65 @@ export type BackgroundRemovalInput = {
 export type BackgroundRemovalResult = {
   filename: string;
   mimeType: 'image/png';
-  pngBase64: string;
+  uri: string;
 };
 
-const endpoint = process.env.EXPO_PUBLIC_BACKGROUND_REMOVAL_ENDPOINT;
-
-export class BackgroundRemovalConfigurationError extends Error {
-  constructor() {
-    super(
-      'Background removal needs a secure backend endpoint before processing can run.',
-    );
-    this.name = 'BackgroundRemovalConfigurationError';
+export class NativeBackgroundRemovalUnavailableError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NativeBackgroundRemovalUnavailableError';
   }
 }
 
 export async function removeImageBackground({
   image,
 }: BackgroundRemovalInput): Promise<BackgroundRemovalResult> {
-  if (!endpoint) {
-    throw new BackgroundRemovalConfigurationError();
-  }
-
   if (!image.uri) {
     throw new Error('The selected image does not include a readable file URI.');
   }
 
-  const fileName = image.fileName ?? `tinytools-source-${Date.now()}.jpg`;
-  const mimeType = image.mimeType ?? guessMimeType(fileName);
-  const formData = new FormData();
-
-  if (image.file) {
-    formData.append('image', image.file);
-  } else {
-    formData.append('image', {
-      uri: image.uri,
-      name: fileName,
-      type: mimeType,
-    } as unknown as Blob);
+  if (Platform.OS === 'web') {
+    throw new NativeBackgroundRemovalUnavailableError(
+      'Background removal runs on-device in the iOS and Android apps. Web is not supported.',
+    );
   }
 
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    body: formData,
-    headers: {
-      Accept: 'image/png, application/json',
-    },
-  });
+  const supported = await isNativeBackgroundRemovalSupported();
 
-  if (!response.ok) {
-    throw new Error(await getProviderErrorMessage(response));
+  if (!supported) {
+    throw new NativeBackgroundRemovalUnavailableError(
+      'On-device background removal requires iOS 17 or newer. No image was uploaded.',
+    );
   }
 
-  const contentType = response.headers.get('content-type') ?? '';
+  const uri = await removeBackground(image.uri, { trim: false });
 
-  if (contentType.includes('application/json')) {
-    const payload = (await response.json()) as {
-      pngBase64?: string;
-      imageBase64?: string;
-      filename?: string;
-      mimeType?: string;
-    };
-    const pngBase64 = payload.pngBase64 ?? payload.imageBase64;
-
-    if (!pngBase64) {
-      throw new Error('The backend did not return a PNG image payload.');
-    }
-
-    return {
-      filename: payload.filename ?? makeOutputFilename(),
-      mimeType: 'image/png',
-      pngBase64: stripDataUriPrefix(pngBase64),
-    };
+  if (!uri) {
+    throw new Error('The native background remover did not return a PNG file.');
   }
 
-  const pngBlob = await response.blob();
-
-  if (pngBlob.type && !pngBlob.type.includes('png')) {
-    throw new Error('The backend returned a file that was not a PNG image.');
+  if (Platform.OS === 'ios' && uri === image.uri) {
+    throw new NativeBackgroundRemovalUnavailableError(
+      'iOS background removal requires a physical device. The simulator cannot process this image.',
+    );
   }
 
   return {
-    filename: makeOutputFilename(),
+    filename: getFilenameFromUri(uri),
     mimeType: 'image/png',
-    pngBase64: await blobToBase64(pngBlob),
+    uri,
   };
+}
+
+function getFilenameFromUri(uri: string) {
+  const withoutQuery = uri.split('?')[0];
+  const filename = withoutQuery.split('/').pop();
+
+  return filename && filename.toLowerCase().endsWith('.png')
+    ? filename
+    : makeOutputFilename();
 }
 
 export function makeOutputFilename() {
   return `tinytools-background-removed-${Date.now()}.png`;
-}
-
-function guessMimeType(fileName: string) {
-  const normalized = fileName.toLowerCase();
-
-  if (normalized.endsWith('.png')) return 'image/png';
-  if (normalized.endsWith('.webp')) return 'image/webp';
-  if (normalized.endsWith('.heic')) return 'image/heic';
-  if (normalized.endsWith('.heif')) return 'image/heif';
-
-  return 'image/jpeg';
-}
-
-async function getProviderErrorMessage(response: Response) {
-  const fallback =
-    response.status >= 500
-      ? 'The background removal service is unavailable. Please try again later.'
-      : 'The background removal request failed. Try another image or check the backend setup.';
-
-  try {
-    const payload = (await response.json()) as { error?: string; message?: string };
-    return payload.error ?? payload.message ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function stripDataUriPrefix(value: string) {
-  return value.replace(/^data:image\/png;base64,/, '');
-}
-
-function blobToBase64(blob: Blob) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onerror = () => {
-      reject(new Error('The processed PNG could not be read.'));
-    };
-    reader.onloadend = () => {
-      const result = reader.result;
-
-      if (typeof result !== 'string') {
-        reject(new Error('The processed PNG was not returned as a readable file.'));
-        return;
-      }
-
-      resolve(stripDataUriPrefix(result));
-    };
-    reader.readAsDataURL(blob);
-  });
 }
