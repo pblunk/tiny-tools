@@ -5,11 +5,11 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CategoryChip } from '@/components/CategoryChip';
-import { EmptyFavorites } from '@/components/EmptyFavorites';
 import { SearchBar } from '@/components/SearchBar';
 import { ToolCard } from '@/components/ToolCard';
 import { Text } from '@/components/themed-text';
 import { tools, type Tool, type ToolCategory } from '@/constants/tools';
+import { useAppState } from '@/hooks/use-app-state';
 import { useThemeColor } from '@/hooks/use-theme-color';
 
 const categories: (ToolCategory | 'All')[] = [
@@ -27,7 +27,7 @@ export default function HomeScreen() {
   const [selectedCategory, setSelectedCategory] = useState<
     ToolCategory | 'All'
   >('All');
-  const [favorites, setFavorites] = useState<string[]>([]);
+  const { isFavorite, toggleFavorite } = useAppState();
 
   const backgroundColor = useThemeColor(
     { light: '#F9FAFB', dark: '#0F1215' },
@@ -54,19 +54,6 @@ export default function HomeScreen() {
     });
   }, [query, selectedCategory]);
 
-  const favoriteTools = useMemo(
-    () => tools.filter((tool) => favorites.includes(tool.id)),
-    [favorites],
-  );
-
-  const toggleFavorite = (toolId: string) => {
-    setFavorites((current) =>
-      current.includes(toolId)
-        ? current.filter((id) => id !== toolId)
-        : [...current, toolId],
-    );
-  };
-
   const handleToolPress = (tool: Tool) => {
     router.push(`/tool/${tool.id}`);
   };
@@ -83,6 +70,7 @@ export default function HomeScreen() {
             accessibilityRole="button"
             accessibilityLabel="Settings"
             hitSlop={4}
+            onPress={() => router.push('/settings')}
             style={({ pressed }) => [
               styles.settingsButton,
               pressed && styles.buttonPressed,
@@ -103,29 +91,6 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <SearchBar value={query} onChangeText={setQuery} />
-
-        {favoriteTools.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: titleColor }]}>
-              Favorites
-            </Text>
-            <View style={styles.favoriteList}>
-              {favoriteTools.map((tool) => (
-                <ToolCard
-                  key={tool.id}
-                  tool={tool}
-                  favorite={favorites.includes(tool.id)}
-                  onToggleFavorite={() => toggleFavorite(tool.id)}
-                  onPress={() => handleToolPress(tool)}
-                />
-              ))}
-            </View>
-          </View>
-        ) : (
-          <View style={styles.section}>
-            <EmptyFavorites />
-          </View>
-        )}
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: titleColor }]}>
@@ -159,7 +124,7 @@ export default function HomeScreen() {
               <ToolCard
                 key={tool.id}
                 tool={tool}
-                favorite={favorites.includes(tool.id)}
+                favorite={isFavorite(tool.id)}
                 onToggleFavorite={() => toggleFavorite(tool.id)}
                 onPress={() => handleToolPress(tool)}
               />
@@ -242,9 +207,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: -0.2,
     marginBottom: 12,
-  },
-  favoriteList: {
-    gap: 10,
   },
   categoryScroll: {
     marginHorizontal: -20,

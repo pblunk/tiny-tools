@@ -28,6 +28,19 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "TinyTools needs photo access so you can choose an image to edit."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "TinyTools needs photo access so you can save edited images.",
+          "savePhotosPermission": "TinyTools needs permission to save edited images to your photo library."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

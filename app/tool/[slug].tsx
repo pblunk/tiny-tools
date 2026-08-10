@@ -6,6 +6,7 @@ import { Text } from '@/components/themed-text';
 import { ToolIconWithBackground } from '@/components/ToolIconRenderer';
 import { tools } from '@/constants/tools';
 import { useThemeColor } from '@/hooks/use-theme-color';
+import { BackgroundRemoverScreen } from '@/screens/BackgroundRemoverScreen';
 
 export default function ToolDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -25,6 +26,15 @@ export default function ToolDetailScreen() {
           Tap a tool card on the home screen to open its page.
         </Text>
       </View>
+    );
+  }
+
+  if (tool.id === 'background-remover') {
+    return (
+      <>
+        <Stack.Screen options={{ title: tool.name, headerBackTitle: 'Back' }} />
+        <BackgroundRemoverScreen />
+      </>
     );
   }
 

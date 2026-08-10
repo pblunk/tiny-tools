@@ -26,6 +26,12 @@ export const TOOL_ICON_MAP: Record<string, ToolIconConfig> = {
     color: '#F97316',
     backgroundColor: '#FED7AA',
   },
+  'background-remover': {
+    icon: 'color-wand-outline',
+    library: 'ionicons',
+    color: '#0EA5E9',
+    backgroundColor: '#E0F2FE',
+  },
   'merge-pdf': {
     icon: 'documents-outline',
     library: 'ionicons',

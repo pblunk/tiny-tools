@@ -8,7 +8,6 @@ export type Tool = {
   description: string;
   category: ToolCategory;
   icon: IconSymbolName;
-  favorite: boolean;
 };
 
 export const tools: Tool[] = [
@@ -18,7 +17,6 @@ export const tools: Tool[] = [
     description: 'Convert images between formats quickly.',
     category: 'Images',
     icon: 'photo',
-    favorite: false,
   },
   {
     id: 'image-resizer',
@@ -26,7 +24,6 @@ export const tools: Tool[] = [
     description: 'Resize image dimensions in seconds.',
     category: 'Images',
     icon: 'photo-size-select-small',
-    favorite: false,
   },
   {
     id: 'image-compressor',
@@ -34,7 +31,13 @@ export const tools: Tool[] = [
     description: 'Compress images for faster sharing.',
     category: 'Images',
     icon: 'photo-library',
-    favorite: false,
+  },
+  {
+    id: 'background-remover',
+    name: 'Background Remover',
+    description: 'Remove the background from an image.',
+    category: 'Images',
+    icon: 'content-cut',
   },
   {
     id: 'merge-pdf',
@@ -42,7 +45,6 @@ export const tools: Tool[] = [
     description: 'Combine PDF files into one document.',
     category: 'PDF',
     icon: 'picture-as-pdf',
-    favorite: false,
   },
   {
     id: 'split-pdf',
@@ -50,7 +52,6 @@ export const tools: Tool[] = [
     description: 'Split long PDFs into smaller files.',
     category: 'PDF',
     icon: 'content-cut',
-    favorite: false,
   },
   {
     id: 'text-cleaner',
@@ -58,7 +59,6 @@ export const tools: Tool[] = [
     description: 'Remove formatting and clean up text.',
     category: 'Text',
     icon: 'text-fields',
-    favorite: false,
   },
   {
     id: 'qr-code-generator',
@@ -66,7 +66,6 @@ export const tools: Tool[] = [
     description: 'Create QR codes for links and text.',
     category: 'Utilities',
     icon: 'qr-code',
-    favorite: false,
   },
   {
     id: 'prompt-improver',
@@ -74,6 +73,5 @@ export const tools: Tool[] = [
     description: 'Refine prompts for better AI responses.',
     category: 'AI',
     icon: 'sparkles',
-    favorite: false,
   },
 ];
