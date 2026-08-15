@@ -17,6 +17,19 @@ export default function ToolDetailScreen() {
     { light: '#fff', dark: '#181B1E' },
     'background',
   );
+  const placeholderCardColor = useThemeColor(
+    { light: '#F2F4F8', dark: '#20252B' },
+    'background',
+  );
+  const placeholderBorderColor = useThemeColor(
+    { light: '#E5E7EB', dark: '#343A40' },
+    'background',
+  );
+  const placeholderTitleColor = useThemeColor({}, 'text');
+  const placeholderTextColor = useThemeColor(
+    { light: '#4B5563', dark: '#B7C0CA' },
+    'text',
+  );
 
   if (!tool) {
     return (
@@ -53,9 +66,19 @@ export default function ToolDetailScreen() {
         </View>
       </View>
 
-      <View style={styles.placeholderCard}>
-        <Text style={styles.placeholderTitle}>This tool is coming soon.</Text>
-        <Text style={styles.placeholderText}>
+      <View
+        style={[
+          styles.placeholderCard,
+          {
+            backgroundColor: placeholderCardColor,
+            borderColor: placeholderBorderColor,
+          },
+        ]}
+      >
+        <Text style={[styles.placeholderTitle, { color: placeholderTitleColor }]}>
+          This tool is coming soon.
+        </Text>
+        <Text style={[styles.placeholderText, { color: placeholderTextColor }]}>
           The TinyTools experience is under construction here. This space will
           become the tool workspace.
         </Text>
@@ -98,8 +121,8 @@ const styles = StyleSheet.create({
   },
   placeholderCard: {
     borderRadius: 24,
+    borderWidth: 1,
     padding: 22,
-    backgroundColor: '#F2F4F8',
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 18,
