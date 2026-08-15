@@ -16,6 +16,7 @@ import {
 
 import { Text } from '@/components/themed-text';
 import { ToolIconWithBackground } from '@/components/ToolIconRenderer';
+import { useAppState } from '@/hooks/use-app-state';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import {
   NativeBackgroundRemovalUnavailableError,
@@ -32,6 +33,7 @@ export function BackgroundRemoverScreen() {
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { addBackgroundRemovalHistory } = useAppState();
 
   const backgroundColor = useThemeColor(
     { light: '#F9FAFB', dark: '#0F1215' },
@@ -113,7 +115,15 @@ export function BackgroundRemoverScreen() {
 
     try {
       const processed = await removeImageBackground({ image: selectedImage });
-      setResult(processed);
+      const historyItem = await addBackgroundRemovalHistory({
+        resultUri: processed.uri,
+        originalUri: selectedImage.uri,
+      });
+
+      setResult({
+        ...processed,
+        uri: historyItem?.outputUri ?? processed.uri,
+      });
       setStatus('completed');
       setMessage('Transparent PNG ready.');
     } catch (error) {

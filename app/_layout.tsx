@@ -21,6 +21,10 @@ function RootNavigator() {
           name="settings"
           options={{ title: 'Settings', headerBackTitle: 'Back' }}
         />
+        <Stack.Screen
+          name="history/[id]"
+          options={{ title: 'History Result', headerBackTitle: 'Back' }}
+        />
         <Stack.Screen name="tool/[slug]" options={{ headerBackTitle: 'Back' }} />
       </Stack>
       <StatusBar style="auto" />
