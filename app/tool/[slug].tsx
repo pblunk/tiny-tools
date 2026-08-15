@@ -7,6 +7,8 @@ import { ToolIconWithBackground } from '@/components/ToolIconRenderer';
 import { tools } from '@/constants/tools';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { BackgroundRemoverScreen } from '@/screens/BackgroundRemoverScreen';
+import { MergePdfScreen } from '@/screens/MergePdfScreen';
+import { SplitPdfScreen } from '@/screens/SplitPdfScreen';
 
 export default function ToolDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -47,6 +49,24 @@ export default function ToolDetailScreen() {
       <>
         <Stack.Screen options={{ title: tool.name, headerBackTitle: 'Back' }} />
         <BackgroundRemoverScreen />
+      </>
+    );
+  }
+
+  if (tool.id === 'merge-pdf') {
+    return (
+      <>
+        <Stack.Screen options={{ title: tool.name, headerBackTitle: 'Back' }} />
+        <MergePdfScreen />
+      </>
+    );
+  }
+
+  if (tool.id === 'split-pdf') {
+    return (
+      <>
+        <Stack.Screen options={{ title: tool.name, headerBackTitle: 'Back' }} />
+        <SplitPdfScreen />
       </>
     );
   }

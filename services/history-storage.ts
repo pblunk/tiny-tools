@@ -1,6 +1,8 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
-export type HistoryToolId = 'background-remover';
+import { sanitizeFileName } from '@/services/pdf-tools';
+
+export type HistoryToolId = 'background-remover' | 'merge-pdf' | 'split-pdf';
 
 export type HistoryItem = {
   id: string;
@@ -9,8 +11,11 @@ export type HistoryItem = {
   subtitle: string;
   createdAt: number;
   outputUri: string;
+  fileName?: string;
+  pageCount?: number;
+  fileSizeBytes?: number;
   originalUri?: string;
-  mimeType: 'image/png';
+  mimeType: 'image/png' | 'application/pdf';
 };
 
 const historyDirectory = FileSystem.documentDirectory
@@ -74,6 +79,27 @@ export async function persistHistoryPng(sourceUri: string) {
   return destinationUri;
 }
 
+export async function persistHistoryPdfBase64({
+  base64,
+  fileName,
+}: {
+  base64: string;
+  fileName: string;
+}) {
+  if (!historyDirectory) {
+    throw new Error('History storage is not available on this platform.');
+  }
+
+  await ensureHistoryDirectory();
+
+  const destinationUri = `${historyDirectory}${makeHistoryPdfFilename(fileName)}`;
+  await FileSystem.writeAsStringAsync(destinationUri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
+
+  return destinationUri;
+}
+
 export async function clearHistoryStorage() {
   if (!historyDirectory) return;
 
@@ -92,6 +118,10 @@ export async function deleteHistoryFile(uri: string) {
 
 function makeHistoryPngFilename() {
   return `background-remover-${Date.now()}.png`;
+}
+
+function makeHistoryPdfFilename(fileName: string) {
+  return `${Date.now()}-${sanitizeFileName(fileName)}.pdf`;
 }
 
 async function ensureHistoryDirectory() {
@@ -115,11 +145,19 @@ function isHistoryItem(value: unknown): value is HistoryItem {
 
   return (
     typeof item.id === 'string' &&
-    item.toolId === 'background-remover' &&
+    isHistoryToolId(item.toolId) &&
     typeof item.title === 'string' &&
     typeof item.subtitle === 'string' &&
     typeof item.createdAt === 'number' &&
     typeof item.outputUri === 'string' &&
-    item.mimeType === 'image/png'
+    (item.mimeType === 'image/png' || item.mimeType === 'application/pdf')
+  );
+}
+
+function isHistoryToolId(value: unknown): value is HistoryToolId {
+  return (
+    value === 'background-remover' ||
+    value === 'merge-pdf' ||
+    value === 'split-pdf'
   );
 }

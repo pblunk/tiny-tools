@@ -17,6 +17,7 @@ import { Text } from '@/components/themed-text';
 import { useAppState } from '@/hooks/use-app-state';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import { historyFileExists } from '@/services/history-storage';
+import { formatFileSize, sharePdf } from '@/services/pdf-tools';
 
 type FileStatus = 'checking' | 'available' | 'missing';
 
@@ -74,6 +75,11 @@ export default function HistoryDetailScreen() {
   const savePng = async () => {
     if (!item || fileStatus !== 'available') return;
 
+    if (item.mimeType === 'application/pdf') {
+      await exportPdf('Save');
+      return;
+    }
+
     try {
       const permission = await MediaLibrary.requestPermissionsAsync(true, [
         'photo',
@@ -94,6 +100,11 @@ export default function HistoryDetailScreen() {
   const sharePng = async () => {
     if (!item || fileStatus !== 'available') return;
 
+    if (item.mimeType === 'application/pdf') {
+      await exportPdf('Share');
+      return;
+    }
+
     try {
       const available = await Sharing.isAvailableAsync();
 
@@ -109,6 +120,24 @@ export default function HistoryDetailScreen() {
       });
     } catch {
       setMessage('The PNG could not be shared. Please try again.');
+    }
+  };
+
+  const exportPdf = async (label: 'Save' | 'Share') => {
+    if (!item || fileStatus !== 'available') return;
+
+    try {
+      await sharePdf(
+        item.outputUri,
+        label === 'Save' ? `Save ${item.title}` : `Share ${item.title}`,
+      );
+      setMessage(
+        label === 'Save'
+          ? 'Choose Save to Files from the sheet to export the PDF.'
+          : 'PDF ready to share.',
+      );
+    } catch {
+      setMessage('The PDF could not be exported. Please try again.');
     }
   };
 
@@ -158,7 +187,7 @@ export default function HistoryDetailScreen() {
               <ActivityIndicator />
               <Text style={styles.centerText}>Checking saved file...</Text>
             </View>
-          ) : fileStatus === 'available' && item ? (
+          ) : fileStatus === 'available' && item?.mimeType === 'image/png' ? (
             <>
               <Checkerboard />
               <Image
@@ -168,6 +197,18 @@ export default function HistoryDetailScreen() {
                 accessibilityLabel={`${item.title} saved result preview`}
               />
             </>
+          ) : fileStatus === 'available' && item ? (
+            <View style={styles.pdfPreview}>
+              <View style={styles.pdfIcon}>
+                <Ionicons name="document-text-outline" size={42} color="#B91C1C" />
+              </View>
+              <Text style={[styles.pdfName, { color: titleColor }]}>
+                {item.fileName ?? 'Saved PDF'}
+              </Text>
+              <Text style={styles.centerText}>
+                {item.pageCount ?? 0} pages · {formatFileSize(item.fileSizeBytes)}
+              </Text>
+            </View>
           ) : (
             <View style={styles.centerState}>
               <Ionicons name="alert-circle-outline" size={28} color="#6B7280" />
@@ -192,11 +233,15 @@ export default function HistoryDetailScreen() {
       <View style={[styles.panel, { backgroundColor: cardColor, borderColor }]}>
         <View style={styles.actionRow}>
           <Button
-            label="Save PNG"
+            label={item?.mimeType === 'application/pdf' ? 'Save PDF' : 'Save PNG'}
             icon="download-outline"
             onPress={savePng}
             disabled={fileStatus !== 'available'}
-            accessibilityLabel="Save transparent PNG to photo library"
+            accessibilityLabel={
+              item?.mimeType === 'application/pdf'
+                ? 'Save PDF'
+                : 'Save transparent PNG to photo library'
+            }
           />
           <Button
             label="Share"
@@ -204,7 +249,11 @@ export default function HistoryDetailScreen() {
             variant="secondary"
             onPress={sharePng}
             disabled={fileStatus !== 'available'}
-            accessibilityLabel="Share transparent PNG"
+            accessibilityLabel={
+              item?.mimeType === 'application/pdf'
+                ? 'Share PDF'
+                : 'Share transparent PNG'
+            }
           />
         </View>
         <View style={styles.deleteRow}>
@@ -345,6 +394,27 @@ const styles = StyleSheet.create({
   previewImage: {
     width: '100%',
     height: '100%',
+  },
+  pdfPreview: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: 28,
+  },
+  pdfIcon: {
+    width: 82,
+    height: 82,
+    borderRadius: 22,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pdfName: {
+    fontSize: 17,
+    lineHeight: 23,
+    fontWeight: '800',
+    textAlign: 'center',
   },
   centerState: {
     ...StyleSheet.absoluteFillObject,

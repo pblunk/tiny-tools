@@ -15,9 +15,11 @@ import {
   HistoryItem,
   isHistoryStorageAvailable,
   loadHistoryItems,
+  persistHistoryPdfBase64,
   persistHistoryItems,
   persistHistoryPng,
 } from '@/services/history-storage';
+import type { GeneratedPdf } from '@/services/pdf-tools';
 
 export type AppearancePreference = 'system' | 'light' | 'dark';
 
@@ -33,6 +35,12 @@ type AppStateContextValue = {
   getHistoryItem: (id: string) => HistoryItem | undefined;
   addBackgroundRemovalHistory: (input: {
     resultUri: string;
+    originalUri?: string;
+  }) => Promise<HistoryItem | null>;
+  addPdfHistory: (input: {
+    toolId: 'merge-pdf' | 'split-pdf';
+    generatedPdf: GeneratedPdf;
+    subtitle: string;
     originalUri?: string;
   }) => Promise<HistoryItem | null>;
   deleteHistoryItem: (id: string) => Promise<void>;
@@ -110,6 +118,50 @@ export function AppStateProvider({ children }: PropsWithChildren) {
     [historyItems, historySupported],
   );
 
+  const addPdfHistory = useCallback(
+    async ({
+      toolId,
+      generatedPdf,
+      subtitle,
+      originalUri,
+    }: {
+      toolId: 'merge-pdf' | 'split-pdf';
+      generatedPdf: GeneratedPdf;
+      subtitle: string;
+      originalUri?: string;
+    }) => {
+      if (!historySupported) {
+        return null;
+      }
+
+      const createdAt = Date.now();
+      const outputUri = await persistHistoryPdfBase64({
+        base64: generatedPdf.base64,
+        fileName: generatedPdf.fileName,
+      });
+      const item: HistoryItem = {
+        id: `${toolId}-${createdAt}`,
+        toolId,
+        title: toolId === 'merge-pdf' ? 'Merge PDF' : 'Split PDF',
+        subtitle,
+        createdAt,
+        outputUri,
+        originalUri,
+        fileName: generatedPdf.fileName,
+        pageCount: generatedPdf.pageCount,
+        fileSizeBytes: generatedPdf.fileSizeBytes,
+        mimeType: 'application/pdf',
+      };
+      const next = [item, ...historyItems];
+
+      await persistHistoryItems(next);
+      setHistoryItems(next);
+
+      return item;
+    },
+    [historyItems, historySupported],
+  );
+
   const getHistoryItem = useCallback(
     (id: string) => historyItems.find((item) => item.id === id),
     [historyItems],
@@ -162,11 +214,13 @@ export function AppStateProvider({ children }: PropsWithChildren) {
       historySupported,
       getHistoryItem,
       addBackgroundRemovalHistory,
+      addPdfHistory,
       deleteHistoryItem,
       clearHistory,
     }),
     [
       addBackgroundRemovalHistory,
+      addPdfHistory,
       appearance,
       clearHistory,
       colorScheme,

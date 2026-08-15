@@ -8,6 +8,7 @@ import { Text } from '@/components/themed-text';
 import { useAppState } from '@/hooks/use-app-state';
 import { useThemeColor } from '@/hooks/use-theme-color';
 import type { HistoryItem } from '@/services/history-storage';
+import { formatFileSize } from '@/services/pdf-tools';
 
 export default function HistoryScreen() {
   const router = useRouter();
@@ -98,20 +99,35 @@ function HistoryCard({
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.thumbnailFrame}>
-        <Checkerboard />
-        <Image
-          source={{ uri: item.outputUri }}
-          style={styles.thumbnail}
-          contentFit="contain"
-          accessibilityLabel={`${item.title} result preview`}
-        />
-      </View>
+      {item.mimeType === 'image/png' ? (
+        <View style={styles.thumbnailFrame}>
+          <Checkerboard />
+          <Image
+            source={{ uri: item.outputUri }}
+            style={styles.thumbnail}
+            contentFit="contain"
+            accessibilityLabel={`${item.title} result preview`}
+          />
+        </View>
+      ) : (
+        <View style={styles.pdfThumbnail}>
+          <Ionicons name="document-text-outline" size={28} color="#B91C1C" />
+        </View>
+      )}
       <View style={styles.cardContent}>
         <Text style={[styles.cardTitle, { color: titleColor }]}>
           {item.title}
         </Text>
-        <Text style={styles.cardSubtitle}>{item.subtitle}</Text>
+        <Text style={styles.cardSubtitle}>
+          {item.mimeType === 'application/pdf' && item.fileName
+            ? item.fileName
+            : item.subtitle}
+        </Text>
+        {item.mimeType === 'application/pdf' ? (
+          <Text style={styles.cardMeta}>
+            {item.pageCount ?? 0} pages · {formatFileSize(item.fileSizeBytes)}
+          </Text>
+        ) : null}
         <Text style={styles.cardDate}>{formatHistoryDate(item.createdAt)}</Text>
       </View>
       <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
@@ -202,6 +218,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  pdfThumbnail: {
+    width: 68,
+    height: 68,
+    borderRadius: 12,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   checkerboard: {
     ...StyleSheet.absoluteFillObject,
     flexDirection: 'row',
@@ -230,6 +254,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#6B7280',
+  },
+  cardMeta: {
+    marginTop: 2,
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#6B7280',
+    fontWeight: '700',
   },
   cardDate: {
     marginTop: 4,
