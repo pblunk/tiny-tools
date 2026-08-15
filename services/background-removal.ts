@@ -1,5 +1,4 @@
 import {
-  isNativeBackgroundRemovalSupported,
   removeBackground,
 } from '@six33/react-native-bg-removal';
 import type { ImagePickerAsset } from 'expo-image-picker';
@@ -32,14 +31,6 @@ export async function removeImageBackground({
   if (Platform.OS === 'web') {
     throw new NativeBackgroundRemovalUnavailableError(
       'Background removal runs on-device in the iOS and Android apps. Web is not supported.',
-    );
-  }
-
-  const supported = await isNativeBackgroundRemovalSupported();
-
-  if (!supported) {
-    throw new NativeBackgroundRemovalUnavailableError(
-      'On-device background removal requires iOS 17 or newer. No image was uploaded.',
     );
   }
 
